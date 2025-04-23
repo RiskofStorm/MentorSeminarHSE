@@ -1,0 +1,6 @@
+pymongo
+psycopg2
+pendulum
+requests
+pandas
+pyspark
