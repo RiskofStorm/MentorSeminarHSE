@@ -4,3 +4,4 @@ pendulum
 requests
 pandas
 pyspark
+pyhive
