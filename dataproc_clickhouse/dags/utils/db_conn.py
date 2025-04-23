@@ -4,8 +4,8 @@ import paramiko
 from pyhive import hive
 from sshtunnel import SSHTunnelForwarder
 
-def get_clickhouse_connection():
-    return clickhouse_connect.get_client(host='clickhouse-server', username='default') # password='password'
+# def get_clickhouse_connection():
+    # return clickhouse_connect.get_client(host='clickhouse-server', username='default') # password='password'
 
 def get_hive_connection():
     ssh_host = '51.250.35.56'

@@ -2,17 +2,20 @@ import os
 import sqlite3
 import logging
 
+import requests
 import pendulum
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.utils.task_group import TaskGroup
 
-from utils.db_conn import get_clickhouse_connection
+# from utils.db_conn import get_clickhouse_connection
 
 logger = logging.getLogger(__name__)
 dag_name = os.path.splitext(os.path.basename(__file__))[0]
 cur_dir = os.path.abspath(os.path.dirname(__file__))
+
+clickhouse_user, clickhouse_pass = 'admin', 'flames78'
 
 default_args = {
     'owner': 'Airflow',
@@ -51,67 +54,77 @@ tg_init_db = TaskGroup(
 )
 
 clickhouse_ddls = [
-    "CREATE SCHEMA IF NOT EXISTS stg;",
     """
-    CREATE TABLE IF NOT EXISTS stg.transactions_v2 (
-        transaction_id Int32,
+CREATE TABLE IF NOT EXISTS transactions_v2 (
+        transaction_id Int32 PRIMARY KEY,
         user_id Int32,
         amount float,
-        currency string,
+        currency String,
         transaction_date DateTime('Europe/Moscow'),
         is_fraud Bool
     );
     """,
     """
-    CREATE TABLE IF NOT EXISTS stg.logs_v2 (
-        log_id Int32,
+
+    """,
+    """
+CREATE TABLE IF NOT EXISTS logs_v2 (
+        log_id Int32 PRIMARY KEY,
         transaction_id Int32,
-        category string,
-        comment string,
+        category String,
+        comment String,
         log_timestamp DateTime('Europe/Moscow')
     );
     """,
     """
-    CREATE TABLE IF NOT EXISTS stg.orders
+CREATE TABLE IF NOT EXISTS order_items(
+        item_id Int32 PRIMARY KEY,
         order_id Int32,
-        user_id Int32,
-        order_date DateTime('Europe/Moscow'),
-        total_amount float,
-        payment_status string
-    );
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS stg.order_items(
-        item_id Int32,
-        order_id Int32,
-        product_name string,
+        product_name String,
         product_price float,
         quantity Int32
     )
     """,
     """
-    INSERT INTO stg.orders
-       SELECT *
-       FROM s3('https://storage.yandexcloud.net/winterbaket/orders.csv', 'csv');
+CREATE TABLE IF NOT EXISTS orders(
+    order_id Int32 PRIMARY KEY,
+    user_id Int32,
+    order_date DateTime('Europe/Moscow'),
+    total_amount float,
+    payment_status String
+);
+
     """,
     """
-    INSERT INTO stg.order_items
-    SELECT *
-    FROM s3('https://storage.yandexcloud.net/winterbaket/order_items.txt', 'csv');
+INSERT INTO orders
+SELECT *
+FROM s3('https://storage.yandexcloud.net/winterbaket/orders.csv', 'csv');
+    """,
+    """
+SET format_csv_delimiter = ';';
+SET format_custom_field_delimiter = ';';
+SET format_custom_row_between_delimiter = ';';
+INSERT INTO order_items
+SELECT *
+FROM s3('https://storage.yandexcloud.net/winterbaket/order_items.txt', 'csv');
     """
 ]
 
 
 def init_clickhouse(clickhouse_ddls, logger) -> None:
-    conn = get_clickhouse_connection()
-    cur = conn.cursor()
     for query in clickhouse_ddls:
-        logger.info(f'EXECUTING SQL QUERY {query}')
-        cur.execute(query)
-
-    conn.commit()
-    conn.close()
-    logger.info(f"CREATED CLICKHOUSE TABLES ")
+        response = requests.get(
+            'https://{0}:8443'.format('rc1d-rb45b5o0avh16ld2.mdb.yandexcloud.net'),
+            params={
+                'query': query,
+            },
+            headers={
+                'X-ClickHouse-User': clickhouse_user,
+                'X-ClickHouse-Key': clickhouse_pass,
+            },
+            verify='/usr/local/share/ca-certificates/Yandex/RootCA.crt'
+        )
+        logger.info(response.text)
 
 
 
