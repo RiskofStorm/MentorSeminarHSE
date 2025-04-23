@@ -53,79 +53,28 @@ tg_init_db = TaskGroup(
     dag=dag,
 )
 
-clickhouse_ddls = [
+hive_queries = (
     """
-CREATE TABLE IF NOT EXISTS transactions_v2 (
-        transaction_id Int32 PRIMARY KEY,
-        user_id Int32,
-        amount float,
-        currency String,
-        transaction_date DateTime('Europe/Moscow'),
-        is_fraud Bool
-    );
-    """,
+    SELECT *
+    
     """
+)
 
-    """,
-    """
-CREATE TABLE IF NOT EXISTS logs_v2 (
-        log_id Int32 PRIMARY KEY,
-        transaction_id Int32,
-        category String,
-        comment String,
-        log_timestamp DateTime('Europe/Moscow')
-    );
-    """,
-    """
-CREATE TABLE IF NOT EXISTS order_items(
-        item_id Int32 PRIMARY KEY,
-        order_id Int32,
-        product_name String,
-        product_price float,
-        quantity Int32
+
+def get_data_clickhouse(query, logger) -> None:
+    response = requests.get(
+        'https://{0}:8443'.format('rc1d-rb45b5o0avh16ld2.mdb.yandexcloud.net'),
+        params={
+            'query': query,
+        },
+        headers={
+            'X-ClickHouse-User': clickhouse_user,
+            'X-ClickHouse-Key': clickhouse_pass,
+        },
+        verify='/usr/local/share/ca-certificates/Yandex/RootCA.crt'
     )
-    """,
-    """
-CREATE TABLE IF NOT EXISTS orders(
-    order_id Int32 PRIMARY KEY,
-    user_id Int32,
-    order_date DateTime('Europe/Moscow'),
-    total_amount float,
-    payment_status String
-);
-
-    """,
-    """
-INSERT INTO orders
-SELECT *
-FROM s3('https://storage.yandexcloud.net/winterbaket/orders.csv', 'csv');
-    """,
-    """
-SET format_csv_delimiter = ';';
-SET format_custom_field_delimiter = ';';
-SET format_custom_row_between_delimiter = ';';
-INSERT INTO order_items
-SELECT *
-FROM s3('https://storage.yandexcloud.net/winterbaket/order_items.txt', 'csv');
-    """
-]
-
-
-def init_clickhouse(clickhouse_ddls, logger) -> None:
-    for query in clickhouse_ddls:
-        response = requests.get(
-            'https://{0}:8443'.format('rc1d-rb45b5o0avh16ld2.mdb.yandexcloud.net'),
-            params={
-                'query': query,
-            },
-            headers={
-                'X-ClickHouse-User': clickhouse_user,
-                'X-ClickHouse-Key': clickhouse_pass,
-            },
-            verify='/usr/local/share/ca-certificates/Yandex/RootCA.crt'
-        )
-        logger.info(response.text)
-
+    logger.info(response.text)
+    return response.text
 
 
 
