@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 dag_name = os.path.splitext(os.path.basename(__file__))[0]
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
-clickhouse_user, clickhouse_pass = 'admin', 'flames78'
+clickhouse_user, clickhouse_pass = 'admin', '****'
 
 default_args = {
     'owner': 'Airflow',
