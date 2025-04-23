@@ -13,6 +13,7 @@ RUN apt-get update && \
 USER airflow
 RUN airflow db init
 
+COPY hse_dataproc /tmp/hse_dataproc
 COPY requirements.txt /tmp/requirements.txt
 # RUN pip uninstall bson
 RUN pip install --no-cache-dir -r /tmp/requirements.txt

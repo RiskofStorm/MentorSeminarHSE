@@ -1,7 +1,8 @@
-pymongo
-psycopg2
 pendulum
 requests
 pandas
 pyspark
 pyhive
+clickhouse-connect
+paramiko
+sshtunnel
